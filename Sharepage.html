@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Partage de Projets</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8480714748018467"
+     crossorigin="anonymous"></script>
+     <meta name="google-adsense-account" content="ca-pub-8480714748018467">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              background: linear-gradient(135deg, #fd7d63 0%,#c04255 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            color: white;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status-banner {
+            background: rgba(255,255,255,0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            color: white;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+
+        .not-connected {
+            background: rgba(220, 53, 69, 0.2);
+            border: 2px solid rgba(220, 53, 69, 0.5);
+        }
+
+        .connected {
+            background: rgba(40, 167, 69, 0.2);
+            border: 2px solid rgba(40, 167, 69, 0.5);
+        }
+
+        .search-section, .upload-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+
+        .search-bar {
+            width: 100%;
+            padding: 15px;
+            font-size: 18px;
+            border: 2px solid #e1e5e9;
+            border-radius: 50px;
+            background: #f8f9fa;
+        }
+
+        .search-bar:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .upload-form {
+            display: grid;
+            gap: 20px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 2fr;
+            gap: 20px;
+            align-items: start;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #555;
+        }
+
+        input, textarea {
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        input:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        .json-input {
+            min-height: 200px;
+            font-family: 'Courier New', monospace;
+            background: #f8f9fa;
+        }
+
+        button {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .projects-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+        }
+
+        .project-card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
+        }
+
+        .project-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+
+        .project-card.deleting {
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.5s ease;
+        }
+
+        .project-title {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .project-description {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+
+        .project-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+
+        .download-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 10px;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .delete-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .delete-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(220, 53, 69, 0.3);
+        }
+
+        .project-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            font-weight: 500;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .disabled-section {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .menu-btn {
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .menu-btn:hover {
+            background: rgba(255,255,255,0.3);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-2px);
+        }
+
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .projects-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <button onclick="goToMenu()" class="menu-btn">
+                    ← Retour au Menu
+                </button>
+                <div style="flex: 1;"></div>
+            </div>
+            <h1>🚀 Plateforme de Partage de Projets</h1>
+            <p>Partagez et découvrez des projets avec la communauté</p>
+        </div>
+
+        <!-- Bannière de statut de connexion -->
+        <div id="connection-status" class="status-banner">
+            <div id="status-text">Vérification de la connexion...</div>
+        </div>
+
+        <!-- Section de recherche -->
+        <div class="search-section">
+            <h3 style="margin-bottom: 15px; color: #333;">🔍 Rechercher des projets</h3>
+            <input type="text" class="search-bar" id="search-input" placeholder="Rechercher par titre..." oninput="searchProjects()">
+        </div>
+
+        <!-- Section d'upload (désactivée si non connecté) -->
+        <div id="upload-section" class="upload-section">
+            <h3 style="margin-bottom: 20px; color: #333;">📤 Partager votre projet</h3>
+            <div class="upload-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="project-title">Titre du projet :</label>
+                        <input type="text" id="project-title" placeholder="Nom de votre projet" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="project-description">Description :</label>
+                        <textarea id="project-description" placeholder="Décrivez votre projet..."></textarea>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="project-json">Code JSON du projet :</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <button type="button" onclick="selectJsonFile()" style="flex: 0 0 auto; padding: 12px 20px; font-size: 16px;">
+                            📁 Choisir un fichier JSON
+                        </button>
+                        <input type="file" id="json-file-input" accept=".json" style="display: none;" onchange="loadJsonFile(event)">
+                        <span id="file-name" style="color: #666; font-style: italic;"></span>
+                    </div>
+                </div>
+                <button onclick="uploadProject()" id="upload-btn">Partager le projet</button>
+            </div>
+            <div id="upload-message"></div>
+        </div>
+
+        <!-- Grille des projets -->
+        <div id="projects-container">
+            <h3 style="margin-bottom: 25px; color: white; text-align: center;">📁 Projets partagés</h3>
+            <div id="projects-grid" class="projects-grid">
+                <!-- Les projets seront chargés ici -->
+            </div>
+        </div>
+    </div>
+
+<script>
+        // Configuration Supabase
+        let SUPABASE_URL = "https://lszvmibkbtrviasravxv.supabase.co";
+        let SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxzenZtaWJrYnRydmlhc3Jhdnh2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQxMjk0MTgsImV4cCI6MjA2OTcwNTQxOH0.XZQSJAGY7eDb1ILl2F-x_-HzKLjnH8Isyh54W8hEVHc";
+        
+        let supabase;
+        let currentUser = null;
+        let allProjects = [];
+        let isConnected = false;
+        let selectedJsonData = null; // Stocker le JSON sélectionné
+
+        // Fonction principale qui s'exécute après le fetch
+        function initializeApp() {
+            try {
+                if (typeof window.supabase !== 'undefined' && SUPABASE_ANON_KEY !== '') {
+                    supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                    console.log('✅ Supabase initialisé avec succès');
+                } else {
+                    console.error('❌ Clés Supabase manquantes');
+                    return;
+                }
+            } catch (error) {
+                console.error('❌ Erreur d\'initialisation Supabase:', error);
+                return;
+            }
+
+            // Fonction pour initialiser l'interface
+            function initializeInterface() {
+                // Vérifier l'état de connexion et charger les projets
+                checkConnectionStatus().then(() => {
+                    loadProjects();
+                });
+
+                // Écouter les changements d'authentification en temps réel
+                supabase.auth.onAuthStateChange((event, session) => {
+                    if (event === 'SIGNED_IN' && session) {
+                        currentUser = session.user;
+                        isConnected = true;
+                        updateConnectionStatus(true, session.user);
+                    } else if (event === 'SIGNED_OUT') {
+                        currentUser = null;
+                        isConnected = false;
+                        updateConnectionStatus(false, null);
+                    }
+                });
+            }
+
+            // Vérifier si le DOM est déjà chargé
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initializeInterface);
+            } else {
+                // DOM déjà chargé, initialiser immédiatement
+                initializeInterface();
+            }
+        }
+
+        // Fetch des clés API et initialisation de l'app
+        fetch('/api/key')
+          .then(response => response.json())
+          .then(data => {
+            console.log("Clé API reçue du backend :", data);
+            SUPABASE_URL = data.databaseUrl;
+            SUPABASE_ANON_KEY = data.apiKey;
+            
+            // Initialiser l'application après avoir reçu les clés
+            initializeApp();
+          })
+          .catch(error => {
+            console.error('Erreur en récupérant la clé:', error);
+            // Afficher un message d'erreur à l'utilisateur
+          /*  const statusBanner = document.getElementById('connection-status');
+            const statusText = document.getElementById('status-text');
+            if (statusBanner && statusText) {
+                statusBanner.className = 'status-banner not-connected';
+                statusText.innerHTML = '❌ Erreur de configuration - Impossible de charger l\'application';
+            }*/
+                        initializeApp();// a supprimé si .env
+          });
+
+        // FONCTION PRINCIPALE : Vérifier si l'utilisateur est connecté
+        async function checkConnectionStatus() {
+            if (!supabase) {
+                updateConnectionStatus(false, null);
+                return;
+            }
+
+            try {
+                // Récupérer l'utilisateur actuellement connecté
+                const { data: { user }, error } = await supabase.auth.getUser();
+                
+                if (error) {
+                    console.error('Erreur lors de la vérification:', error);
+                    updateConnectionStatus(false, null);
+                    return;
+                }
+
+                if (user) {
+                    // L'utilisateur est connecté
+                    currentUser = user;
+                    isConnected = true;
+                    updateConnectionStatus(true, user);
+                } else {
+                    // L'utilisateur n'est pas connecté
+                    updateConnectionStatus(false, null);
+                }
+            } catch (error) {
+                console.error('Erreur de connexion:', error);
+                updateConnectionStatus(false, null);
+            }
+        }
+
+        // Mettre à jour l'interface selon le statut de connexion
+        function updateConnectionStatus(connected, user) {
+            const statusBanner = document.getElementById('connection-status');
+            const statusText = document.getElementById('status-text');
+            const uploadSection = document.getElementById('upload-section');
+
+            if (connected && user) {
+                // Utilisateur connecté - afficher le username ou l'email si pas de username
+                const displayName = user.user_metadata?.username || user.user_metadata?.name || user.email;
+                statusBanner.className = 'status-banner connected';
+                statusText.innerHTML = `✅ Connecté en tant que : <strong>${displayName}</strong>`;
+                uploadSection.classList.remove('disabled-section');
+            } else {
+                // Utilisateur non connecté
+                statusBanner.className = 'status-banner not-connected';
+                statusText.innerHTML = '❌ Non connecté - Vous ne pouvez que consulter les projets';
+                uploadSection.classList.add('disabled-section');
+            }
+        }
+
+        // Fonctions de gestion des projets
+        async function uploadProject() {
+            if (!isConnected) {
+                showUploadMessage('Vous devez être connecté pour partager un projet', 'error');
+                return;
+            }
+
+            const title = document.getElementById('project-title').value;
+            const description = document.getElementById('project-description').value;
+
+            if (!title || !selectedJsonData) {
+                showUploadMessage('Le titre et le fichier JSON sont obligatoires', 'error');
+                return;
+            }
+
+            // Utiliser le username ou l'email comme fallback
+            const displayName = currentUser.user_metadata?.username || currentUser.user_metadata?.name || currentUser.email;
+
+            const { data, error } = await supabase
+                .from('projects')
+                .insert({
+                    title: title,
+                    description: description,
+                    json_data: selectedJsonData,
+                    user_id: currentUser.id,
+                    user_email: displayName, // On stocke le username dans le champ user_email
+                    created_at: new Date().toISOString()
+                });
+
+            if (error) {
+                showUploadMessage('Erreur lors du partage: ' + error.message, 'error');
+            } else {
+                showUploadMessage('Projet partagé avec succès!', 'success');
+                // Réinitialiser le formulaire
+                document.getElementById('project-title').value = '';
+                document.getElementById('project-description').value = '';
+                document.getElementById('file-name').textContent = '';
+                selectedJsonData = null;
+                loadProjects();
+            }
+        }
+
+        async function loadProjects() {
+            if (!supabase) return;
+
+            const { data, error } = await supabase
+                .from('projects')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Erreur lors du chargement:', error);
+                return;
+            }
+
+            allProjects = data || [];
+            displayProjects(allProjects);
+        }
+
+        function displayProjects(projects) {
+            const grid = document.getElementById('projects-grid');
+            
+            if (projects.length === 0) {
+                grid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">Aucun projet trouvé</p>';
+                return;
+            }
+
+            grid.innerHTML = projects.map(project => {
+                // Vérifier si l'utilisateur connecté est l'auteur
+                const isAuthor = currentUser && currentUser.id === project.user_id;
+                
+                return `
+                    <div class="project-card" data-project-id="${project.id}">
+                        <div class="project-title">${escapeHtml(project.title)}</div>
+                        <div class="project-description">${escapeHtml(project.description || 'Aucune description')}</div>
+                        <div class="project-meta">
+                            <span>Par: ${escapeHtml(project.user_email)}</span>
+                            <span>${new Date(project.created_at).toLocaleDateString('fr-FR')}</span>
+                        </div>
+                        <div class="project-actions">
+                            <button class="download-btn" onclick="downloadProject('${project.id}', '${escapeHtml(project.title)}')">
+                                📥 Télécharger JSON
+                            </button>
+                            ${isAuthor ? `
+                                <button class="delete-btn" onclick="deleteProject('${project.id}', '${escapeHtml(project.title)}')">
+                                    🗑️ Supprimer mon projet
+                                </button>
+                            ` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function searchProjects() {
+            const searchTerm = document.getElementById('search-input').value.toLowerCase();
+            const filteredProjects = allProjects.filter(project => 
+                project.title.toLowerCase().includes(searchTerm) ||
+                (project.description && project.description.toLowerCase().includes(searchTerm))
+            );
+            displayProjects(filteredProjects);
+        }
+
+        async function downloadProject(projectId, projectTitle) {
+            const project = allProjects.find(p => p.id === projectId);
+            if (!project) return;
+
+            const blob = new Blob([project.json_data], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${projectTitle.replace(/[^a-z0-9]/gi, '_')}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        async function deleteProject(projectId, projectTitle) {
+            // Demander confirmation avant suppression
+            const confirmDelete = confirm(`Êtes-vous sûr de vouloir supprimer le projet "${projectTitle}" ?\n\nCette action est irréversible.`);
+            
+            if (!confirmDelete) return;
+
+            // Trouver la carte du projet et ajouter la classe d'animation
+            const projectCard = document.querySelector(`[data-project-id="${projectId}"]`);
+            if (projectCard) {
+                projectCard.classList.add('deleting');
+            }
+
+            try {
+                console.log('Tentative de suppression du projet:', projectId, 'par utilisateur:', currentUser.id);
+                
+                const { data, error } = await supabase
+                    .from('projects')
+                    .delete()
+                    .eq('id', projectId)
+                    .eq('user_id', currentUser.id)
+                    .select(); // Ajouter select() pour confirmer la suppression
+
+                console.log('Résultat de la suppression:', { data, error });
+
+                if (error) {
+                    console.error('Erreur Supabase:', error);
+                    // En cas d'erreur, retirer la classe d'animation
+                    if (projectCard) {
+                        projectCard.classList.remove('deleting');
+                    }
+                    alert('Erreur lors de la suppression: ' + error.message);
+                    return;
+                }
+
+                // Vérifier que la suppression a bien eu lieu
+                if (!data || data.length === 0) {
+                    console.warn('Aucun projet supprimé - vérifiez les permissions');
+                    if (projectCard) {
+                        projectCard.classList.remove('deleting');
+                    }
+                    alert('Impossible de supprimer le projet. Vérifiez que vous en êtes bien l\'auteur.');
+                    return;
+                }
+
+                console.log('Projet supprimé avec succès:', data);
+
+                // Succès : attendre la fin de l'animation puis supprimer l'élément du DOM
+                setTimeout(() => {
+                    if (projectCard) {
+                        projectCard.remove();
+                    }
+                    // Mettre à jour le tableau des projets
+                    allProjects = allProjects.filter(p => p.id !== projectId);
+                    
+                    // Si plus aucun projet, afficher le message
+                    if (allProjects.length === 0) {
+                        const grid = document.getElementById('projects-grid');
+                        grid.innerHTML = '<p style="text-align: center; color: #666; grid-column: 1/-1;">Aucun projet trouvé</p>';
+                    }
+                }, 500); // Durée de l'animation CSS
+
+                // Afficher le message de succès
+                alert(`Projet "${projectTitle}" supprimé avec succès !`);
+
+            } catch (error) {
+                console.error('Erreur lors de la suppression:', error);
+                // En cas d'erreur, retirer la classe d'animation
+                if (projectCard) {
+                    projectCard.classList.remove('deleting');
+                }
+                alert('Une erreur est survenue lors de la suppression');
+            }
+        }
+
+        function showUploadMessage(message, type) {
+            const messageDiv = document.getElementById('upload-message');
+            messageDiv.innerHTML = `<div class="status-message ${type}">${message}</div>`;
+            setTimeout(() => {
+                messageDiv.innerHTML = '';
+            }, 5000);
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Fonction pour aller au menu
+        function goToMenu() {
+            // Vous pouvez personnaliser cette fonction selon vos besoins
+            // Par exemple, rediriger vers une page menu :
+             window.location.href = 'index.html';
+            
+            // Ou ouvrir dans un nouvel onglet :
+            // window.open('menu.html', '_blank');
+            
+            // Pour l'instant, affiche une alerte (à personnaliser)
+        }
+
+        // Fonctions pour la sélection de fichier JSON
+        function selectJsonFile() {
+            document.getElementById('json-file-input').click();
+        }
+
+        function loadJsonFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Vérifier que c'est un fichier JSON
+            if (!file.name.toLowerCase().endsWith('.json')) {
+                alert('Veuillez sélectionner un fichier JSON (.json)');
+                return;
+            }
+
+            // Lire le contenu du fichier
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    // Vérifier que le contenu est un JSON valide
+                    const jsonContent = e.target.result;
+                    JSON.parse(jsonContent); // Test de validation
+                    
+                    // Si valide, stocker le JSON et afficher le nom du fichier
+                    selectedJsonData = jsonContent;
+                    document.getElementById('file-name').textContent = `✅ ${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                    document.getElementById('file-name').style.color = '#28a745';
+                } catch (error) {
+                    alert('Le fichier sélectionné ne contient pas un JSON valide');
+                    document.getElementById('file-name').textContent = '';
+                    selectedJsonData = null;
+                }
+            };
+            reader.readAsText(file);
+        }
+    </script>
+</body>
+</html>

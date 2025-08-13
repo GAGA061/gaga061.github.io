@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Climbing Wall with Babylon.js</title>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-8480714748018467"
+     crossorigin="anonymous"></script>
+     <meta name="google-adsense-account" content="ca-pub-8480714748018467">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            overflow: hidden;
+        }
+
+        #renderCanvas {
+            width: 100%;
+            height: 100vh;
+            display: block;
+            cursor: crosshair;
+        }
+
+        /* Panel de contrôle principal */
+        #controls {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 280px;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        #controls.collapsed {
+            transform: translateX(-240px);
+        }
+
+        .panel-toggle {
+            position: absolute;
+            right: -40px;
+            top: 10px;
+            background: rgba(30, 30, 30, 0.95);
+            border: none;
+            color: white;
+            padding: 10px;
+            border-radius: 0 10px 10px 0;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .panel-toggle:hover {
+            background: rgba(60, 60, 60, 0.95);
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .section h3 {
+            margin: 0 0 15px 0;
+            color: #4CAF50;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            min-width: 80px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #2196F3, #1976D2);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f44336, #d32f2f);
+            color: white;
+        }
+
+        .btn-warning {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn.active {
+            background: linear-gradient(135deg, #FF5722, #E64A19);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(255, 87, 34, 0.4);
+        }
+
+        .btn-blocz{
+            background: rgba(30, 30, 30, 0.95);
+            background-image: url("http://localhost:8000/holds/blocz-logo.png");
+            background-size: 100%;
+            background-position: 0.1rem;
+            background-repeat: no-repeat;
+            transition: all 0.5s ease;
+            color: transparent;
+        }
+        .btn-blocz:hover{
+            background-image: none;
+            font-size: 20px;
+            color: red;
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: 14px;
+            font-weight: 500;
+            color: #ccc;
+        }
+
+        .form-control {
+            width: 93%;
+            padding: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+        }
+
+        #shapesMenu {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+
+    /* Scrollbar verticale */
+    max-height: calc(2 * 82px + 10px);      /* Ajuste cette valeur selon tes besoins */
+    overflow-y: auto;
+    overflow-x: hidden;
+
+    /* Optionnel : bordure pour voir la zone scrollable */
+    padding: 10px;
+}
+
+        .shapeItem {
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid transparent;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            font-size: 12px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .shapeItem:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .shapeItem.selected {
+            background: rgba(76, 175, 80, 0.3);
+            border-color: #4CAF50;
+            transform: translateY(-2px);
+        }
+
+        .shape-icon {
+            font-size: 20px;
+            margin-bottom: 5px;
+            display: block;
+        }
+
+        /* Info panel */
+        .info-panel {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(30, 30, 30, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            min-width: 250px;
+            z-index: 1000;
+        }
+
+        .info-panel h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+            font-size: 14px;
+        }
+
+        .info-panel p {
+            margin: 5px 0;
+            font-size: 12px;
+            color: #ccc;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-camera { background: #2196F3; }
+        .status-create { background: #4CAF50; }
+        .status-edit { background: #FF9800; }
+
+        .slider-container {
+            margin-top: 10px;
+        }
+
+        .slider {
+            width: 100%;
+            margin: 10px 0;
+        }
+
+        .color-picker-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .color-preview {
+            width: 30px;
+            height: 30px;
+            border-radius: 6px;
+            border: 2px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .keyboard-shortcuts {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            font-size: 11px;
+            color: #999;
+        }
+
+        .keyboard-shortcuts h5 {
+            margin: 0 0 8px 0;
+            color: #ccc;
+        }
+
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+
+        .key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+        /* Notifications */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 2000;
+            animation: slideIn 0.3s ease;
+        }
+
+        .notification.success { background: #4CAF50; }
+        .notification.error { background: #f44336; }
+        .notification.info { background: #2196F3; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+                /* Bouton central en haut */
+        .top-center-button {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1001;
+            transition: all 0.3s ease;
+        }
+
+        .top-center-button:hover {
+            transform: translateX(-50%) translateY(-2px);
+            box-shadow: 0 12px 40px rgba(76, 175, 80, 0.4);
+            background: linear-gradient(135deg, #45a049, #4CAF50);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            #controls {
+                left: 10px;
+                right: 10px;
+                min-width: auto;
+            }
+            
+            .info-panel {
+                left: 10px;
+                right: 10px;
+                bottom: 10px;
+            }
+            
+            #shapesMenu {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .top-center-button {
+                padding: 12px 20px;
+                font-size: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+<canvas id="renderCanvas"></canvas>
+
+<!-- Panel de contrôle principal -->
+<button class="top-center-button" onclick="window.location.href = 'index.html';">
+     Menu
+</button>
+
+<div id="controls">
+        <button class="panel-toggle" id="panelToggle1" onclick="hiddMenue()" style="display: none;">▶</button>
+    <button class="panel-toggle" id="panelToggle" onclick="hiddMenue()">◀</button>
+    
+    <!-- Mode de travail -->
+    <div class="section">
+        <h3>Mode de Travail</h3>
+        <div class="button-group">
+            <button class="btn btn-secondary" id="toggleMode">Camera</button>
+            <button class="btn btn-warning" id="toggleWallEdit">Edit Wall</button>
+        </div>
+    </div>
+
+    <!-- Gestion des fichiers -->
+    <div class="section">
+        <h3>Fichiers</h3>
+        <div class="button-group">
+            <button class="btn btn-primary" id="saveWall">💾 Sauver</button>
+            <button class="btn btn-secondary" id="loadWall">📂 Charger</button>
+            <button class="btn btn-danger" id="clearAll" onclick="deleteall()">🗑️ Vider</button>
+        </div>
+    </div>
+<div id="selectionPrise" style="display: block;">
+    <!-- Formes des prises -->
+    <div class="section">
+        <h3>Formes des Prises</h3>
+        <div class="form-group">
+            <input type="text" class="form-control" id="shapeSearch" placeholder="Rechercher une forme...">
+        </div>
+        <div id="shapesMenu">
+            <div class="shapeItem selected" data-shape="crimp">
+                <span class="shape-icon"><img src="holds/crimp.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                crimp
+            </div>
+            <div class="shapeItem" data-shape="jug">
+                <span class="shape-icon"><img src="holds/jug.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                jug
+            </div>
+            <div class="shapeItem" data-shape="ruler">
+                <span class="shape-icon"><img src="holds/rule.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                1m-ruler
+            </div>
+            <div class="shapeItem" data-shape="volume">
+                <span class="shape-icon"><img src="holds/volume.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volume
+            </div>
+            <div class="shapeItem" data-shape="poignet">
+                <span class="shape-icon"><img src="holds/poignet.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                poignet
+            </div>
+            <div class="shapeItem" data-shape="back">
+                <span class="shape-icon"><img src="holds/back.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                Back
+            </div>
+            <div class="shapeItem" data-shape="sloper">
+                <span class="shape-icon"><img src="holds/sloper.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                Sloper
+            </div>
+            <div class="shapeItem" data-shape="pocket">
+                <span class="shape-icon"><img src="holds/pocket.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                Pocket
+            </div>
+            <div class="shapeItem" data-shape="volumetr">
+                <span class="shape-icon"><img src="holds/volumetr.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volumetr
+            </div>
+            <div class="shapeItem" data-shape="volumetr2">
+                <span class="shape-icon"><img src="holds/volumetr2.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volumetr2
+            </div>
+            <div class="shapeItem" data-shape="volumetr3">
+                <span class="shape-icon"><img src="holds/volumetr3.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volumetr3
+            </div>
+            <div class="shapeItem" data-shape="volumetr4">
+                <span class="shape-icon"><img src="./holds/volumetr4.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volumetr4
+            </div>
+            <div class="shapeItem" data-shape="volumetr5">
+                <span class="shape-icon"><img src="./holds/volumetr5.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volumetr5
+            </div>
+            <div class="shapeItem" data-shape="newpinch">
+                <span class="shape-icon"><img src="holds/volumetr6.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                volumetr6
+            </div>
+            <div class="shapeItem" data-shape="pinch">
+                <span class="shape-icon"><img src="holds/pinch.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                pinch
+            </div>
+            <div class="shapeItem" data-shape="bihold">
+                <span class="shape-icon"><img src="holds/bihold.png" alt="" style="max-width: 49px; max-height: 49px;"></span>
+                bihold
+            </div>
+        </div>
+    </div>
+
+    <!-- Couleur -->
+    <div class="section">
+        <h3>Couleur des Prises</h3>
+        <div class="color-picker-container">
+            <input type="color" class="form-control" id="shapeColor" value="#4CAF50">
+            <div class="color-preview" id="colorPreview"></div>
+        </div>
+    </div>
+
+    <!-- Taille des prises 
+    <div class="section">
+        <h3>Taille des Prises</h3>
+        <div class="slider-container">
+            <label>Taille: <span id="sizeValue">0.4</span></label>
+            <input type="range" class="slider" id="holdSize" min="0.2" max="1.0" step="0.1" value="0.4">
+        </div>
+    </div>-->
+</div>
+    <!-- Création de panneaux -->
+    <div class="section" id="wallEditPanel" style="display: none;">
+        <h3>Création de Panneaux</h3>
+        <div class="form-group">
+            <label>Largeur</label>
+            <input type="number" class="form-control" id="panelWidth" value="2" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Hauteur</label>
+            <input type="number" class="form-control" id="panelHeight" value="2" step="0.1">
+        </div>
+        <div class="form-group">
+            <label>Angle X (°)</label>
+            <input type="number" class="form-control" id="panelAngle" value="0" step="5">
+        </div>
+        <div class="form-group">
+            <label>Angle Y (°)</label>
+            <input type="number" class="form-control" id="panelAngleY" value="0" step="5">
+        </div>
+        <button class="btn btn-primary" id="addPanel">+ Ajouter Panneau</button>
+    </div>
+
+    <!-- Raccourcis clavier -->
+    <div class="keyboard-shortcuts">
+        <h5>Raccourcis Clavier</h5>
+        <div class="shortcut">
+            <span>Supprimer prise</span>
+            <span class="key">Del</span>
+        </div>
+        <div class="shortcut">
+            <span>Rotation prise</span>
+            <span class="key">R</span>
+        </div>
+        <div class="shortcut">
+            <span>Dupliquer prise</span>
+            <span class="key">Ctrl+D</span>
+        </div>
+        <div class="shortcut">
+            <span>Annuler</span>
+            <span class="key">Ctrl+Z</span>
+        </div>
+        <div class="shortcut">
+            <span>deplacement</span>
+            <span class="key">← → ↑ ↓/[a][z][e][q][s][d]</span>
+        </div>
+    </div>
+</div>
+<!-- Panel d'informations -->
+<div class="info-panel">
+    <h4>État du Système</h4>
+    <p><span class="status-indicator status-camera" id="modeIndicator"></span><span id="currentMode">Mode Camera</span></p>
+    <p>Prises: <span id="holdCount">0</span></p>
+    <p>Panneaux: <span id="panelCount">0</span></p>
+    <p>Prise sélectionnée: <span id="selectedHoldInfo">Aucune</span></p>
+    <button class="btn btn-blocz" onclick='window.open("https://www.blocz.de/en/","blocz","options_nouvelle_fenetre")'>Purchase</button>
+</div>
+
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
+<script src="https://cdn.babylonjs.com/serializers/babylonjs.serializers.min.js"></script>
+<script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
+
